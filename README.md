@@ -14,3 +14,8 @@ L'obiettivo principale è quello di apprendere 3 pattern di classificazione in g
    - Il pattern risultante prendo il nome di Stacker
 5. Valutazione dell'accuratezza dei pattern appresi utilizzando il Testing Set
    - metrica di riferimento per la valutazione: fscore
+   
+## Disclaimer
+   - Impostato un valore di random_state per la cross validation. Per cui il dataset verrà partizionato nello stesso modo ad ogni esecuzione
+   - I migliori parametri di configurazione per gli algoritmi di classificazione così come i risultati di valutazione variano ad ogni esecuzione. 
+     - Elemento di casualità della random forest non gestito (bisogna impostare il parametro random_state)
