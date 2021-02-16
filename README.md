@@ -4,7 +4,7 @@ L'obiettivo principale è quello di apprendere 3 pattern di classificazione in g
 
 ## Steps principali per la realizzazione del progetto
 1. Calcolo dei migliori parametri di configurazione per gli algoritmi di classificazione random forest e K nearest Neighbours 
-   - metrica utilizzata la scelta dei parametri: fscore
+   - metrica utilizzata per la scelta dei parametri: fscore
 2. Addestramento random forest su Training Set
 3. Addestramento random forest sulle (10) Top componenti principali
    - applicata PCA su Training Set
