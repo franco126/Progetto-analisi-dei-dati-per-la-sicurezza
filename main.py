@@ -384,7 +384,7 @@ def learn_knn(x_data, y_data, number_of_neighbours):
     return knn
 
 
-def mutual_info_rank( data, features_list, label):
+def mutual_info_rank(data, features_list, label):
     """
     Calcola la mutualInfoClassif sulla lista delle variabili indipendenti
     :param data: dataset su cui effettuare il calcolo
@@ -397,7 +397,7 @@ def mutual_info_rank( data, features_list, label):
     return sorted_x
 
 
-def top_attribute_selection ( data, sorted_features_list, number_of_top_features ):
+def top_attribute_selection ( sorted_features_list, number_of_top_features ):
     """
     metodo utilizzato per estrarre il nome dei primi n attributi dal dataset ordinato in base alla mutual info
     :param data:
@@ -412,7 +412,7 @@ def top_attribute_selection ( data, sorted_features_list, number_of_top_features
         if (len(topAttributeList) == number_of_top_features):
             break
     # all'elenco dei migliori n attributi aggiungo il nome dell'attributo classe
-    topAttributeList.append(data.columns.values[data.shape[1] - 1])
+    #topAttributeList.append(data.columns.values[data.shape[1] - 1])
     return topAttributeList
 
 
@@ -426,6 +426,7 @@ def feature_selection (data, topAttributeList):
     :return: nuovo dataset
     """
     df = data.loc[:,topAttributeList] #primo parametro: righe secondo parametro: lista di coloonne
+    df[LABEL_NAME] = data[LABEL_NAME]
     return df
 
 if __name__ == '__main__':
@@ -435,17 +436,17 @@ if __name__ == '__main__':
         PRE ELABORATION
     """
     features_list = training_set.columns[0:training_set.shape[1]-1].values
-    print("\nLista degli attributi\n",features_list,"\n")
+    #print("\nLista degli attributi\n",features_list,"\n")
 
     preElaboration(training_set, features_list)
-   # preElaborationBox(training_set, features_list)
-   # preElaborationScatter(training_set, features_list)
+    preElaborationBox(training_set, features_list)
+    preElaborationScatter(training_set, features_list)
 
     sorted_features_list = mutual_info_rank( training_set, features_list, LABEL_NAME )
     print("ATTRIBUTI ORDINATI PER IMPORTANZA\n", sorted_features_list,"\n")
 
     number_of_top_features = 10
-    top_attribute_list = top_attribute_selection(training_set, sorted_features_list, number_of_top_features)
+    top_attribute_list = top_attribute_selection(sorted_features_list, number_of_top_features)
     print("I migliori ", number_of_top_features," attributi sono\n", top_attribute_list,"\n")
 
     dataset_of_top_features = feature_selection( training_set, top_attribute_list)
@@ -466,6 +467,7 @@ if __name__ == '__main__':
     number_of_estimators = randomforest_configuration["N_ESTIMATORS"]
     max_number_features = randomforest_configuration["MAX_FEATURES"]
     max_number_samples = randomforest_configuration["MAX_SAMPLES"]
+
     #Apprendo random forest con i migliori parametri su training test
     randomforest = learn_randomForest(independent_features,dependent_features,number_of_estimators, max_number_features, max_number_samples)
 
@@ -474,7 +476,7 @@ if __name__ == '__main__':
     pca_analysis, pca_columns_list = pca(independent_features)
     pca_dataset = applyPCA(pca_analysis, independent_features, pca_columns_list)
     pca_dataset[LABEL_NAME] = training_set[LABEL_NAME]
-    print("\nPCA DATASET\n", pca_dataset,"\n")
+    #print("\nPCA DATASET\n", pca_dataset,"\n")
 
     pca_independent_features = pca_dataset.iloc[:, 0:pca_dataset.shape[1]-1]
     pca_dependent_features = pca_dataset.iloc[:, pca_dataset.shape[1]-1]
@@ -485,67 +487,70 @@ if __name__ == '__main__':
     pca_number_of_estimators = pca_randomforest_configuration["N_ESTIMATORS"]
     pca_max_number_features = pca_randomforest_configuration["MAX_FEATURES"]
     pca_max_number_samples = pca_randomforest_configuration["MAX_SAMPLES"]
+
     # Apprendo random forest con i migliori parametri sulle 10 top componenti principali
     pca_randomforest = learn_randomForest( pca_independent_features, pca_dependent_features, pca_number_of_estimators, pca_max_number_features, pca_max_number_samples)
 
 
     """ STACKER """
-    """ Creo dataset formato dalle classi predette dalla random forest appresa su intero training set e random forest appresa sulle top 10 features """
+    """ Creo dataset formato dalle classi predette dalla random forest appresa su intero training set e random forest 
+    appresa sulle top 10 features """
     stacker_dataset = pd.DataFrame(columns=["P1", "P2"])
     stacker_dataset["P1"] = pd.Series( randomforest.predict( independent_features ) )
     stacker_dataset["P2"] = pd.Series ( pca_randomforest.predict( pca_independent_features ) )
     stacker_dataset[LABEL_NAME] = training_set[LABEL_NAME]
-    print("\nDataset costituito dalle classi predette\n", stacker_dataset,"\n")
+    #print("\nDataset costituito dalle classi predette\n", stacker_dataset,"\n")
 
     stacker_independent_features = stacker_dataset.iloc[:, 0: stacker_dataset.shape[1]-1 ]
     stacker_dependent_features = stacker_dataset.iloc[:, stacker_dataset.shape[1]-1 ]
 
     best_neighbours = best_knn_configuration(stacker_independent_features, stacker_dependent_features)
-    print("Miglior numero di vicini: ",best_neighbours)
+    print("\nMiglior numero di vicini per l'algoritmo KNN: ", best_neighbours)
 
     #Apprendo knn con il miglior numero di vicini
     knn_classifier = learn_knn(stacker_independent_features, stacker_dependent_features, best_neighbours)
 
 
-    """ VALIDAZIONE DEI PATTERN APPRESI SUL TESTING SET  """
+    """ VALUTAZIONE DEI PATTERN APPRESI """
     testing_set = load_data_from_csv(PATH_TESTING_SET)
     number_of_features = testing_set.shape[1]
     independent_features = testing_set.iloc[:, 0:number_of_features-1]
     dependent_features = testing_set.iloc[:, number_of_features-1]
 
-    """ VALUTAZIONE RANDOM FOREST APPRESA SULL'INTERO TRAINING SET """
+    """ VALUTAZIONE RANDOM FOREST ADDESTRATA SULL'INTERO TRAINING SET """
     metrics = evaluate_classifier(independent_features,dependent_features,randomforest)
-    print("VALUTAZIONE DELLA RANDOM FOREST APPRESA SULL'INTERO TRAINING SET\n",metrics)
+    print("\nVALUTAZIONE DELLA RANDOM FOREST APPRESA SULL'INTERO TRAINING SET\n",metrics)
 
 
-    """ VALUTAZIONE RANDOM FOREST APPRESA TRAMITE PCA SU TESTING SET """
-    """ Calcolo PCA su testing set"""
+    """ VALUTAZIONE RANDOM FOREST ADDESTRATA SULLE (10) TOP COMPONENTI PRINCIPALI SU TESTING SET """
+    #-- PCA calcolata per il Testing Set
     #pca_testing_set, pca_testing_set_columns = pca ( independent_features )
     #pca_testing_dataset = applyPCA(pca_testing_set, independent_features, pca_testing_set_columns)
+    #--
+    # PCA calcolata sul Training Set applicata sul Testing Set
     pca_testing_dataset = applyPCA(pca_analysis, independent_features, pca_columns_list)
     pca_testing_dataset[LABEL_NAME] = testing_set[LABEL_NAME]
-    print("\nPCA TESTING SET\n", pca_testing_dataset,"\n")
-
+    #print("\nPCA TESTING SET\n", pca_testing_dataset,"\n")
     """ Valutazione """
     pca_independent_features = pca_testing_dataset.iloc[:, 0:pca_testing_dataset.shape[1] - 1]
     pca_dependent_features = pca_testing_dataset.iloc[:, pca_testing_dataset.shape[1] - 1]
     pca_metrics = evaluate_classifier( pca_independent_features, pca_dependent_features, pca_randomforest )
-    print("VALUTAZIONE DELLA RANDOM FOREST APPRESA SULLE TOP 10 FEATURE SUL TRAINING SET\n", pca_metrics)
+    print("\nVALUTAZIONE DELLA RANDOM FOREST APPRESA SULLE TOP 10 FEATURE SUL TRAINING SET\n", pca_metrics)
 
 
-    """ VALUTAZIONE STACKER SU TESTING SET"""
+    """ VALUTAZIONE DEL PATTERN STACKER APPRESO SU TESTING SET"""
     class_predicted_one = randomforest.predict(independent_features)
-    class_predcited_two = pca_randomforest.predict (pca_independent_features)
+    class_predicted_two = pca_randomforest.predict (pca_independent_features)
 
     testing_stacker_dataset = pd.DataFrame(columns=["P1", "P2"])
     testing_stacker_dataset["P1"] = pd.Series(class_predicted_one)
-    testing_stacker_dataset["P2"] = pd.Series(class_predcited_two)
+    testing_stacker_dataset["P2"] = pd.Series(class_predicted_two)
     testing_stacker_dataset[LABEL_NAME] = testing_set[LABEL_NAME]
-    print("\nSTACKER DATASET COSTRUITO CON LE PREDIZIONI SUL TESTING SET\n",testing_stacker_dataset,"\n")
+    #print("\nSTACKER DATASET COSTRUITO CON LE PREDIZIONI SUL TESTING SET\n",testing_stacker_dataset,"\n")
 
     stacker_independent_features = testing_stacker_dataset.iloc[:, 0: testing_stacker_dataset.shape[1]-1 ]
     stacker_dependent_features = testing_stacker_dataset.iloc[:, testing_stacker_dataset.shape[1]-1 ]
     stacker_metrics = evaluate_classifier(stacker_independent_features, stacker_dependent_features, knn_classifier )
-    print("VALUTAZIONE STACKER TRAMITE KNN SUL TESTING SET\n", stacker_metrics)
+    print("\nVALUTAZIONE STACKER TRAMITE KNN SUL TESTING SET\n", stacker_metrics)
 
     quit()
